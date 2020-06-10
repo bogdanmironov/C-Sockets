@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <netinet/in.h>
 #include <sys/time.h>
 #include <errno.h>
 #include <arpa/inet.h>
@@ -30,8 +29,6 @@ int main (int argc, char *argv[]) {
     int sd, max_sd;
     int activity;
 
-    
-    // char *welcome_message = "Hello from server"; //asdasdsad
 
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         client_socket[i] = 0;
@@ -95,10 +92,6 @@ int main (int argc, char *argv[]) {
             recv(new_socket, buffer, 1024, 0);
             printf("New connection , socket fd is %d , ip is : %s , port : %d , username: %s \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs (address.sin_port), buffer); 
 
-            // if (send(new_socket, welcome_message, strlen(welcome_message), 0) != strlen(welcome_message)) {   
-            //     perror("send");   
-            // }    //TODO
-
 
             for (int i = 0; i < MAX_CLIENTS; ++i) {    
                 if (client_socket[i] == 0) {   
@@ -131,9 +124,6 @@ int main (int argc, char *argv[]) {
                         
                         char message[MAX_MESSAGE_SIZE];
                         get_message_and_leave_reciever(buffer, message);
-
-                        printf("%s\n", buffer);
-                        printf("%s\n", message);
 
                         int recipient_id = contains(usernames, buffer);
 

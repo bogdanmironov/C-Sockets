@@ -1,29 +1,67 @@
 #include <stdio.h> 
 #include <sys/socket.h> 
 #include <arpa/inet.h> 
-//#include <netinet/in.h>
 #include <unistd.h> 
 #include <stdlib.h>
 #include <string.h> 
 #include <pthread.h>
 #include <stdint.h>
 
-#define ever (;;) 
+#define ever (;;)   
 
 #define PORT 8888
 #define MAX_MESSAGE_SIZE 1024
 #define MAX_USERNAME_LEN 255
 
-void *print_recieved_messages(void* socket);
+void *print_recieved_messages(void* socket); //Thread_func
+
+int connect_to_server();
+void create_printer(int sock);
+void choose_username(int sock);
 
 int main(int argc, char *argv[]) {
+    int sock = connect_to_server();
+    choose_username(sock);
+    create_printer(sock);
+
+    char message[MAX_MESSAGE_SIZE];
+    while(1) {
+        fgets(message, MAX_MESSAGE_SIZE, stdin);
+        strtok(message, "\n");
+        send(sock, message, strlen(message), 0);
+
+        if(strcmp(message, "bye") == 0) {
+            break;
+        }
+    }
+    
+    return 0;
+}
+
+void choose_username(int sock) {
+    char username[MAX_USERNAME_LEN];
+
+    printf("Choose username: ");
+    fgets(username, MAX_USERNAME_LEN, stdin);
+    strtok(username, "\n");
+
+    send(sock, username, strlen(username), 0);
+}
+
+void create_printer(int sock) {
     pthread_t thread;
 
-    int sock = 0;
-    struct sockaddr_in serv_addr;
+    int rc = pthread_create(&thread, NULL, print_recieved_messages, (void *) (intptr_t)sock);
 
-    char username[MAX_USERNAME_LEN];
-    char message[MAX_MESSAGE_SIZE];
+    if (rc) {
+        printf("ERROR; pthread_create() return %d\n", rc);
+        exit(-1);
+    }
+}
+
+int connect_to_server() {
+    int sock;
+    struct sockaddr_in serv_addr;
 
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("Socket creation error\n");
@@ -38,35 +76,12 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    if (connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr))) {
+    if (connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
         perror("Connection failed");
         exit(EXIT_FAILURE);
     }
 
-    printf("Choose username: ");
-    fgets(username, MAX_USERNAME_LEN, stdin);
-    strtok(username, "\n");
-
-    send(sock, username, strlen(username), 0);
-
-    int rc = pthread_create(&thread, NULL, print_recieved_messages, (void *) (intptr_t)sock);
-
-    if (rc) {
-        printf("ERROR; pthread_create() return %d\n", rc);
-        exit(-1);
-    }
-
-    while(1) {
-        fgets(message, MAX_MESSAGE_SIZE, stdin);
-        strtok(message, "\n");
-        send(sock, message, strlen(message), 0);
-
-        if(strcmp(message, "bye") == 0) {
-            break;
-        }
-    }
-    
-    return 0;
+    return sock;
 }
 
 void *print_recieved_messages(void *socket) {
@@ -81,12 +96,12 @@ void *print_recieved_messages(void *socket) {
         }
 
         if (strcmp("E404", buffer) == 0) {
-            printf("Such username was not found.\n");
+            printf("There is no such username.\n");
             continue;
         }
 
         if (strcmp("E400", buffer) == 0) {
-            printf("Invalid format.\n");
+            printf("Invalid format.[Recipient#Message]\n");
             continue;
         }
 
