@@ -14,6 +14,7 @@
 #define MAX_MESSAGE_SIZE 1024
 
 char usernames[MAX_CLIENTS][MAX_USERNAME_LEN];
+int number_of_clients;
 
 void get_message_and_leave_reciever(char*, char*);
 int contains(char usernames[MAX_CLIENTS][MAX_USERNAME_LEN], char *buffer);
@@ -43,7 +44,7 @@ int main (int argc, char *argv[]) {
         } else {
 
             relay_message(client_sockets, readfds);
-            
+
         }
 
     }
@@ -110,6 +111,16 @@ void add_socket(int server_socket, struct sockaddr_in address, int (*client_sock
 
 
     add_socket_to_list(new_socket, &*client_sockets, buffer);
+
+    int number_of_clients_n = htonl(number_of_clients);
+    send(new_socket, &number_of_clients_n, sizeof(number_of_clients), 0);
+
+    for (int i = 0; i < number_of_clients; ++i) {
+        send(new_socket, usernames[i], strlen(usernames[i]), 0);
+        printf("%s\n", usernames[i]);
+    }
+    
+
 }
 
 void add_socket_to_list(int new_socket, int (*client_sockets)[MAX_CLIENTS], char *name) {
@@ -120,6 +131,7 @@ void add_socket_to_list(int new_socket, int (*client_sockets)[MAX_CLIENTS], char
                     
             strcpy(usernames[i], name);
 
+            number_of_clients = i + 1;
             break;   
         }   
     } 
