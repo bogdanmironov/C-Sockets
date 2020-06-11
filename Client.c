@@ -18,24 +18,31 @@ void *print_recieved_messages(void* socket); //Thread_func
 int connect_to_server();
 void create_printer(int sock);
 void choose_username(int sock);
+void get_and_send_messages(int sock);
 
 int main(int argc, char *argv[]) {
     int sock = connect_to_server();
     choose_username(sock);
     create_printer(sock);
 
-    char message[MAX_MESSAGE_SIZE];
+    
     while(1) {
-        fgets(message, MAX_MESSAGE_SIZE, stdin);
-        strtok(message, "\n");
-        send(sock, message, strlen(message), 0);
-
-        if(strcmp(message, "bye") == 0) {
-            break;
-        }
+        get_and_send_messages(sock);
     }
     
     return 0;
+}
+
+void get_and_send_messages(int sock) {
+    char message[MAX_MESSAGE_SIZE];
+
+    fgets(message, MAX_MESSAGE_SIZE, stdin);
+    strtok(message, "\n");
+
+    if(strcmp(message, "exit") == 0) exit(0);
+
+    send(sock, message, strlen(message), 0);
+
 }
 
 void choose_username(int sock) {
