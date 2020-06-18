@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <curses.h>
+#include <sys/select.h>
+#include <errno.h>
 
 #define ever (;;)   
 #define MAX_CLIENTS 30
@@ -155,22 +157,38 @@ int connect_to_server() {
 
 void *update_users(void *socket) {
     int sock = (intptr_t) socket;
-
+    fd_set readfds; 
+    int max_sd = sock;
 
     for ever {
-        recv(sock, &number_users, sizeof(number_users), 0);
+        FD_ZERO(&readfds);
 
-        // pthread_mutex_lock(&m_print_message);
-        number_users = ntohl(number_users);
-        printf("%d\n", number_users);
+        FD_SET(sock, &readfds);
+        max_sd = sock;
 
-        for (int i = 0; i < number_users; ++i) {
-            int len_username;
-            recv(sock, &len_username, sizeof(unsigned int), 0);
-            recv(sock, usernames[i], len_username, 0);
+        int activity = select( max_sd + 1 , &readfds , NULL , NULL , NULL);  
+
+        if ((activity < 0) && (errno!=EINTR)) {   
+            printf("select error");   
+        }   
+
+        if ( FD_ISSET(sock, &readfds) ) {
+            // if (recv(sock, &number_users, sizeof(number_users), MSG_PEEK) == 0) continue;
+            pthread_mutex_lock(&m_print_message);
+
+            recv(sock, &number_users, sizeof(number_users), 0);
+
+            number_users = ntohl(number_users);
+            printf("%d\n", number_users);
+
+            for (int i = 0; i < number_users; ++i) {
+                int len_username;
+                recv(sock, &len_username, sizeof(unsigned int), 0);
+                recv(sock, usernames[i], len_username, 0);
+            }
+            pthread_mutex_unlock(&m_print_message); //we use mutex to ensure that we are not printing obsolete info
+            // sleep(1);
         }
-        // pthread_mutex_unlock(&m_print_message); //we use mutex to ensure that we are not printing obsolete info
-        sleep(1);
     }
 }
 

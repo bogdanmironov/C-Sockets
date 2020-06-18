@@ -113,16 +113,19 @@ void add_socket(int server_socket, struct sockaddr_in address, int (*client_sock
 
     add_socket_to_list(new_socket, &*client_sockets, buffer);
 
-    int number_of_clients_n = htonl(number_of_clients);
-    printf("%d\n", number_of_clients);
-    send(new_socket, &number_of_clients_n, sizeof(number_of_clients), 0);
+    for (int curr_sock = 0; curr_sock < number_of_clients; ++curr_sock) {
+        int number_of_clients_n = htonl(number_of_clients);
+        // printf("%d\n", number_of_clients);
+        send((*client_sockets)[curr_sock], &number_of_clients_n, sizeof(number_of_clients), 0);
 
-    for (int i = 0; i < number_of_clients; ++i) {
-        unsigned int len_username = strlen(usernames[i]);
-        send(new_socket, &len_username, sizeof(unsigned int), 0);
-        send(new_socket, usernames[i], len_username, 0);
-        printf("%s\n", usernames[i]);
+        for (int i = 0; i < number_of_clients; ++i) {
+            unsigned int len_username = strlen(usernames[i]);
+            send((*client_sockets)[curr_sock], &len_username, sizeof(unsigned int), 0);
+            send((*client_sockets)[curr_sock], usernames[i], len_username, 0);
+            // printf("%s\n", usernames[i]);
+        }
     }
+
     
 
 }
