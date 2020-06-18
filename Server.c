@@ -14,7 +14,7 @@
 #define MAX_MESSAGE_SIZE 1024
 
 char usernames[MAX_CLIENTS][MAX_USERNAME_LEN];
-int number_of_clients;
+int number_of_clients = 0;
 
 void get_message_and_leave_reciever(char*, char*);
 int contains(char usernames[MAX_CLIENTS][MAX_USERNAME_LEN], char *buffer);
@@ -60,6 +60,7 @@ void relay_message(int *client_sockets, fd_set readfds) {
         if ( FD_ISSET( sd, &readfds) ) {
             int valread = recv(sd, buffer, 1024, 0);
             if ( valread == 0 ) {
+                number_of_clients--;
                 printf("%s disconected.\n", usernames[i]);
 
                 close( sd );   
@@ -113,10 +114,13 @@ void add_socket(int server_socket, struct sockaddr_in address, int (*client_sock
     add_socket_to_list(new_socket, &*client_sockets, buffer);
 
     int number_of_clients_n = htonl(number_of_clients);
+    printf("%d\n", number_of_clients);
     send(new_socket, &number_of_clients_n, sizeof(number_of_clients), 0);
 
     for (int i = 0; i < number_of_clients; ++i) {
-        send(new_socket, usernames[i], strlen(usernames[i]), 0);
+        unsigned int len_username = strlen(usernames[i]);
+        send(new_socket, &len_username, sizeof(unsigned int), 0);
+        send(new_socket, usernames[i], len_username, 0);
         printf("%s\n", usernames[i]);
     }
     
@@ -131,7 +135,7 @@ void add_socket_to_list(int new_socket, int (*client_sockets)[MAX_CLIENTS], char
                     
             strcpy(usernames[i], name);
 
-            number_of_clients = i + 1;
+            number_of_clients++;
             break;   
         }   
     } 

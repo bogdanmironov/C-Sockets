@@ -19,6 +19,8 @@ int number_users = 0;
 
 void *print_recieved_messages(void* socket); //Thread function
 void *menu(void *socket); //Thread function
+void *update_users(void *socket); //Thread function
+void init_client(int sock);
 
 pthread_mutex_t m_print_message; //Mutex start with m_
 void mutex_init();
@@ -26,15 +28,18 @@ void mutex_init();
 int connect_to_server();
 void create_printer(int sock);
 void create_menu(int sock);
+void create_username_updater(int sock);
 void choose_username(int sock);
 void read_and_send_messages(int sock, char *recipent);
+
+
+// WINDOW *win;
 
 int main(int argc, char *argv[]) {
     mutex_init();
     int sock = connect_to_server();
     choose_username(sock);
-    create_printer(sock);
-    create_menu(sock);
+    init_client(sock);
 
     
     for ever {
@@ -81,13 +86,23 @@ void choose_username(int sock) {
     printf("done\n");
 
     send(sock, username, strlen(username), 0);
+}
 
-    recv(sock, &number_users, sizeof(number_users), 0);
-    number_users = ntohl(number_users);
-    printf("%d\n", number_users);
+void init_client(int sock) {
+    create_username_updater(sock);
+    sleep(1);
+    create_menu(sock);
+    create_printer(sock);
+}
 
-    for (int i = 0; i < number_users; ++i) {
-        recv(sock, usernames[i], MAX_USERNAME_LEN, 0);
+void create_username_updater(int sock) {
+    pthread_t thread;
+
+    int rc = pthread_create(&thread, NULL, update_users, (void *) (intptr_t)sock);
+
+    if (rc) {
+        printf("ERROR; pthread_create(update_users) return %d\n", rc);
+        exit(-1);
     }
 }
 
@@ -138,6 +153,27 @@ int connect_to_server() {
     return sock;
 }
 
+void *update_users(void *socket) {
+    int sock = (intptr_t) socket;
+
+
+    for ever {
+        recv(sock, &number_users, sizeof(number_users), 0);
+
+        // pthread_mutex_lock(&m_print_message);
+        number_users = ntohl(number_users);
+        printf("%d\n", number_users);
+
+        for (int i = 0; i < number_users; ++i) {
+            int len_username;
+            recv(sock, &len_username, sizeof(unsigned int), 0);
+            recv(sock, usernames[i], len_username, 0);
+        }
+        // pthread_mutex_unlock(&m_print_message); //we use mutex to ensure that we are not printing obsolete info
+        sleep(1);
+    }
+}
+
 void *menu(void *socket) {
     initscr(); // Curses init
     int sock = (intptr_t) socket;
@@ -145,28 +181,39 @@ void *menu(void *socket) {
     int position = 0;
     int input;
 
+    
+
     for ever {
+        // printf("HI\n");
+        // update_users(sock);
         pthread_mutex_lock(&m_print_message);
+        int pos = 0;
+        move(pos,0);
         cbreak(); //Get a character at a time
         noecho();
         keypad(stdscr, TRUE);
         
         addstr("Active users:\n");
         for ( int print = 0; print < number_users; print++ ) {
+            pos++;
+
+            move(pos, 0);
             if ( print == position ) addstr(">");
             else addstr(" ");
 
             addstr(usernames[print]);
-            addstr("\n");
         }
 
+        move(++pos, 0);
         addstr("Press arrow keys to move,Enter to choose;\n");
+
+        refresh();
 
         // pthread_mutex_unlock(&m_print_message);
 
 
         input = getch();
-        system("clear");
+        // system("clear");
 
         // if( input == 224 || input == 0 ){
         //     input = getch();
@@ -181,7 +228,7 @@ void *menu(void *socket) {
         // pthread_mutex_lock(&m_print_message);
 
         if( input == KEY_ENTER ){
-            system("clear");
+            // system("clear");
             addstr("Enter message:\n");
             read_and_send_message(sock, usernames[position]);
         }
@@ -216,6 +263,9 @@ void *print_recieved_messages(void *socket) {
             continue;
         }
 
+        int h, w;
+        getmaxyx(stdscr, h, w);
+        move( h-4, 0 );
         token = strtok(buffer, delim);
         addstr("Recieved a message from ");
         addstr(token);
@@ -224,7 +274,7 @@ void *print_recieved_messages(void *socket) {
         addstr("Message: ");
         addstr(token);
         addstr("\n");
-        sleep(1);
+        // sleep(1);
 
         // printf("\nPress key to continue\n");
         // getchar();
