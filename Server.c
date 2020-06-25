@@ -85,18 +85,11 @@ void relay_message(int *client_sockets, fd_set readfds) {
 
 void send_usernames(int socket, int *client_sockets) {
     send(socket, "$", 1, 0); //Sends type of msg
-    // int number_of_clients_n = htonl(number_of_clients);
-    // printf("%d\n", number_of_clients);
-    // send(socket, &number_of_clients_n, sizeof(number_of_clients_n), 0);
     printf("%d\n", number_of_clients);
     char number;
     number = number_of_clients + 48;
     printf("%c\n", number);
     send(socket, &number, 1, 0);
-    // send_int(number_of_clients, socket);
-    // char snum[5];
-    // itoa(number_of_clients, snum, 10);
-    // send(socket, snum, 5, 0);
 
     for (int i = 0; i < number_of_clients; ) {
         if (client_sockets[i] != 0) {
@@ -127,6 +120,9 @@ void send_message(char buffer[1024], int *client_sockets, int username_num) {
     char message[MAX_MESSAGE_SIZE];
     get_message_and_leave_reciever(buffer, message);
 
+    printf("Recipient - %s\n", buffer);
+    printf("Message - %s\n", message);
+
     int recipient_id = contains(usernames, buffer);
 
     if ( recipient_id == -1 ) {
@@ -140,7 +136,10 @@ void send_message(char buffer[1024], int *client_sockets, int username_num) {
     strcat(buffer, "#");
     strcat(buffer, message);
 
-    send(client_sockets[recipient_id], "@", sizeof("@"), 0); //Sends type of msg
+    printf("Buffer - %s(%d)\n", buffer, recipient_id);
+
+
+    send(client_sockets[recipient_id], "@", 1, 0); //Sends type of msg
     send(client_sockets[recipient_id], buffer, strlen(buffer), 0);
 }
 
@@ -165,18 +164,6 @@ void add_socket(int server_socket, struct sockaddr_in address, int (*client_sock
 
     send_usernames_to_everyone(*client_sockets);
     printf("Sent to newbie\n");
-    // int number_of_clients_n = htonl(number_of_clients);
-    // printf("%d\n", number_of_clients);
-    // send(new_socket, &number_of_clients_n, sizeof(number_of_clients), 0);
-
-    // for (int i = 0; i < number_of_clients; ++i) {
-    //     unsigned int len_username = strlen(usernames[i]);
-    //     send(new_socket, &len_username, sizeof(unsigned int), 0);
-    //     send(new_socket, usernames[i], len_username, 0);
-    //     printf("%s\n", usernames[i]);
-    // }
-
-
 }
 
 void add_socket_to_list(int new_socket, int (*client_sockets)[MAX_CLIENTS], char *name) {
@@ -255,87 +242,6 @@ void get_message_and_leave_reciever(char *buffer, char *msg) {
 
     strcpy(msg, token);
 }
-
-// void swap(char *str1, char *str2) { 
-//   char *temp = str1; 
-//   str1 = str2; 
-//   str2 = temp; 
-// }   
-
-// void reverse(char str[], int length) { 
-//     int start = 0; 
-//     int end = length -1; 
-//     while (start < end) 
-//     { 
-//         swap((str+start), (str+end)); 
-//         start++; 
-//         end--; 
-//     } 
-// } 
-
-// char* itoa(int num, char* str, int base) { 
-//     int i = 0; 
-//     int isNegative = 0; 
-//   
-//    /* Handle 0 explicitely, otherwise empty string is printed for 0 */
-    // if (num == 0) 
-    // { 
-    //     str[i++] = '0'; 
-    //     str[i] = '\0'; 
-    //     return str; 
-    // } 
-//   
-    // // In standard itoa(), negative numbers are handled only with  
-    // // base 10. Otherwise numbers are considered unsigned. 
-//     if (num < 0 && base == 10) 
-//     { 
-//         isNegative = 1; 
-//         num = -num; 
-//     } 
-//   
-//     // Process individual digits 
-//     while (num != 0) 
-//     { 
-//         int rem = num % base; 
-//         str[i++] = (rem > 9)? (rem-10) + 'a' : rem + '0'; 
-//         num = num/base; 
-//     } 
-//   
-//     // If number is negative, append '-' 
-//     if (isNegative) 
-//         str[i++] = '-'; 
-//   
-//     str[i] = '\0'; // Append string terminator 
-//   
-//     // Reverse the string 
-//     reverse(str, i); 
-//   
-//     return str; 
-// } 
-
-// int send_int(int num, int fd) {
-//     int32_t conv = htonl(num);
-//     char *data = (char*)&conv;
-//     int left = sizeof(conv);
-//     int rc;
-//     do {
-//         rc = write(fd, data, left);
-//         if (rc < 0) {
-//             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-//                 // use select() or epoll() to wait for the socket to be writable again
-//             }
-//             else if (errno != EINTR) {
-//                 return -1;
-//             }
-//         }
-//         else {
-//             data += rc;
-//             left -= rc;
-//         }
-//     }
-//     while (left > 0);
-//     return 0;
-// }
 
 int contains(char usernames[MAX_CLIENTS][MAX_USERNAME_LEN], char *buffer) {
     int contains = -1;

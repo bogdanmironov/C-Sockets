@@ -59,21 +59,34 @@ void mutex_init() {
     } 
 }
 
+
 void read_and_send_message(int sock, char *recipient) {
     char message[MAX_MESSAGE_SIZE];
+    strcpy(message, recipient);
+    char buffer[MAX_MESSAGE_SIZE];
     int size_message = 0;
 
-    getstr(message);
-    strtok(message, "\n");
+    nocbreak();
+    echo();
 
-    if(strcmp(message, "exit") == 0) {
+    getstr(buffer);
+    strtok(buffer, "\n");
+
+    int ch = getch();
+    // int i;
+    for (size_message = 0; ch != '\n'; ++size_message) {
+        buffer[size_message] = ch;
+        ch = getch(); 
+    }    
+
+    if(strcmp(buffer, "exit") == 0) {
         endwin();
         pthread_mutex_destroy(&m_print_message);
         exit(0);
     }
 
-    strcat(recipient, "#");
-    strcat(recipient, message);
+    strcat(message, "#");
+    strcat(message, buffer);
 
     send(sock, message, strlen(message), 0);
 }
@@ -94,7 +107,6 @@ void init_client(int sock) {
     create_printer(sock);
     create_menu(sock);
 }
-
 
 void create_menu(int sock) {
     pthread_t thread;
@@ -151,21 +163,21 @@ void *menu(void *socket) {
     int input;
 
     for ever {
-        // pthread_mutex_lock(&m_print_message);
         int pos = 0;
         move(pos,0);
         cbreak(); //Get a character at a time
         noecho();
         keypad(stdscr, TRUE);
         
-        clear();
+        clrtoeol(); move(pos + 1, 0);
+        clrtoeol(); move(pos + 2, 0);
+        clrtoeol(); move(pos + 3, 0);
+        clrtoeol(); move(pos + 4, 0);
+        clrtoeol(); move(pos + 5, 0);
+        clrtoeol(); move(pos + 6, 0);
+        clrtoeol(); move(pos, 0);
         addstr("Active users:\n");
-        // char snum[5];
-        // itoa(number_users, snum, 10);
-        // addstr(snum);
-        // printw("%d", number_users);
         for ( int print = 0; print < number_users; print++ ) {
-            // addstr("hi");
             pos++;
 
             move(pos, 0);
@@ -198,12 +210,9 @@ void *menu(void *socket) {
 
         nocbreak(); //Restore default settings
         echo();
-        // pthread_mutex_unlock(&m_print_message);
     }
 }
 
-// Cannot clear the recieved msg to show only the menu so
-// sleeping for 1s (disabling input) to turn attention to msg
 void *print_recieved_messages(void *socket) {
     int sock = (intptr_t) socket;
     const char delim[2] = "#";
@@ -214,13 +223,12 @@ void *print_recieved_messages(void *socket) {
         recv(sock, &type_of_msg, 1, 0);
 
         if (type_of_msg == '@') { //Message
-            // addstr("@");
+            addstr("@");
             char buffer[1024] = {0};
             if (recv(sock, buffer, 1024, 0) == 0) {
                 pthread_exit(0);
             }
 
-            // pthread_mutex_lock(&m_print_message);
 
             if (strcmp("E404", buffer) == 0) {
                 addstr("There is no such username.\n");
@@ -244,17 +252,6 @@ void *print_recieved_messages(void *socket) {
             addstr(token);
             addstr("\n");
         } else if (type_of_msg == '$') { //Header
-            // addstr("$");
-            // pthread_mutex_lock(&m_print_message);
-            // int number_users_n;
-            // recv(sock, &number_users_n, sizeof(number_users_n), 0);
-            // receive_int(&number_users, sock);
-            // number_users = ntohl(number_users);
-            // addstr(number_users);
-            // char snum[5];
-            // recv(sock, snum, 5, 0);
-            // number_users = atoi(snum);
-            // addstr(number_users);
             char number[1];
             recv(sock, &number, 1, 0);
             number_users = atoi(number);
@@ -266,44 +263,8 @@ void *print_recieved_messages(void *socket) {
                 recv(sock, &len_username, sizeof(unsigned int), 0);
                 recv(sock, usernames[i], len_username, 0);
             }
-            // pthread_mutex_unlock(&m_print_message);
 
         }
-
-
-        
-        // sleep(1);
-
-        // printf("\nPress key to continue\n");
-        // getchar();
-        // printf("");
-
-        // pthread_mutex_unlock(&m_print_message);
     }
 
 }
-
-// int receive_int(int *num, int fd) {
-//     int32_t ret;
-//     char *data = (char*)&ret;
-//     int left = sizeof(ret);
-//     int rc;
-//     do {
-//         rc = read(fd, data, left);
-//         if (rc <= 0) { /* instead of ret */
-//             if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-//                 // use select() or epoll() to wait for the socket to be readable again
-//             }
-//             else if (errno != EINTR) {
-//                 return -1;
-//             }
-//         }
-//         else {
-//             data += rc;
-//             left -= rc;
-//         }
-//     }
-//     while (left > 0);
-//     *num = ntohl(ret);
-//     return 0;
-// }
